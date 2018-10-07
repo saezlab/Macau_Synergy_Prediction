@@ -1,1 +1,1 @@
-# Macau_Synergy_Prediction
+# Target functional similarity based workflows for drug synergy prediction and patient stratification
