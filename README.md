@@ -1,1 +1,1 @@
-# Target functional similarity based workflows for drug synergy prediction and patient stratification
+# Target functional similarity based workflows for drug synergy prediction and stratification
