@@ -236,8 +236,12 @@ dev.off()
 tissue_name <- "colon"  ; tissue_number = which(tissue==tissue_name) 
 
 t<-c("BRAF","IR","IGF1R") 
+t<-c("EGFR","PLK3")
+t<-c("EGFR","PLK3")
+t<-c("EGFR","PLK3")
+t<-c("EGFR","PLK3")
 
-up_limit <- 0.7 ; down_limit <- 0.8   ##   up_limit <- 0.67 ; down_limit <- 0.52
+up_limit <- 0.67 ; down_limit <- 0.52   ##   up_limit <- 0.67 ; down_limit <- 0.52
 
 mat<-retrieve_interaction_plot(drug_feature_name="target",cell_feature_name="progeny11",selection="conservative",cut_off="single",tissue_name = tissue)[[1]] ; mat <- mat[[tissue_number]]
 mat<-data.matrix(mat);mat_t<-mat[t,]
@@ -291,14 +295,12 @@ Nb_target_per_drug <- c(Nb_target_per_drug, Nb)
 ##########
 result <- cbind(functional_similarity,pathway_rank,Nb_target_per_drug)
 colnames(result)[2] <- paste0(reference_pathway,"_rank")
+#    print_target_GDSC (protein_target= "IR" , target_matrix=target, drug_names=drug_names, T)
 
+subset <- result[ result[ ,3]<3 , ] #  too many targets: NOT reliable.
 subset <- result[ result[ ,2]<=3 , ]  ## desired rank of reference pathway
-# remove drugs with too many or too few targets: NOT reliable.
-subset <- subset[ subset[ ,3]>1 , ]
-subset <- subset[ subset[ ,3]<3 , ]
-
+ 
 ########## check on PUBMED which target most often associated with progeny pathways ##########
-
 rownames(subset)[1] <- "insulin receptor"
 m <- find_pubmed_association(rownames(subset),colnames(mat),constant_term=tissue_name)
 m2 <- cbind(subset,m)
@@ -340,9 +342,9 @@ tissue_name<-"colon" ;  tissue_number = which(tissue==tissue_name)  # colon  : h
 x <- retrieve_interaction_plot(drug_feature_name="target",cell_feature_name="progeny11",selection="conservative",cut_off="single",tissue_name = tissue) ; x <- x[[tissue_number]]
 target_SANGER <- rownames(x)
 
-target <- read.csv("/Users/miyang/Documents/RWTH_Aachen/macau_work_dir/macau_test_sanger/DATA/target", check.names = F) 
+target <- read.csv(paste0(path,"/macau_work_dir/macau_test_sanger/DATA/target"), check.names = F) 
 target <- target[!duplicated(target[,1]),] ; rownames(target) <- target[,1] ; target <- target[ ,-1]
-combo_coread <- readRDS("/Users/miyang/Documents/RWTH_Aachen/SANGER_DATA/DATA_COMBO/gdscCOREAD_dataset.RDS") 
+combo_coread <- readRDS(paste0(path,"/SANGER_DATA/DATA_COMBO/gdscCOREAD_dataset.RDS") )
 combi <- combo_coread$combi ; tested_drugs <- names(table(combi$ANCHOR_NAME))
 drug_set <- target[tested_drugs,target_SANGER] ; drug_set <- drug_set[complete.cases(drug_set), ] ; drug_set <- drug_set[ ,-which(colSums(drug_set)==0)]
 
@@ -360,7 +362,7 @@ tissue_name <- "skin"  ; tissue_number = which(tissue==tissue_name)
 
 x <- retrieve_interaction_plot(drug_feature_name="target",cell_feature_name="progeny11",selection="conservative",cut_off="single",tissue_name = tissue)[[1]] ; x <- x[[tissue_number]]
 target_SANGER <- rownames(x)
-target_combo <- read.csv("~/Documents/RWTH_Aachen/DREAM_AZ/DATA_MERCK/target_combo", row.names=1, check.names = F)
+target_combo <- read.csv(paste0(path,"/DREAM_AZ/DATA_MERCK/target_combo"), row.names=1, check.names = F)
 target_MERCK <- colnames(target_combo)
 match <- match (target_SANGER,  target_MERCK) ; table <- cbind(target_SANGER, match) ; table <- table[complete.cases(table), ]
 target_common <- table[,1]
@@ -459,4 +461,53 @@ dev.off()
 
 
 ```
+
+
+# check functional similarity for a given pair across tissues
+
+```{r include=FALSE, cache=FALSE}
+
+###################################################### CHOOSE TISSUE 
+search_parwise_similarity_across_tissues <- function(target_1,target_2) {
+  pair_table <- expand.grid(target_1,target_2)
+  pair_table$Var1 <- as.character(pair_table$Var1)
+  pair_table$Var2 <- as.character(pair_table$Var2)
+  
+  corr_table <- c()
+  for(pair in 1:length(pair_table[ ,1])) { #   pair = 3
+    corr_store <- c()
+    for(tissue_number in 1:length(tissue)) {  # tissue_number=1 
+      x <- retrieve_interaction_plot(drug_feature_name="target",cell_feature_name="progeny11",selection="conservative",cut_off="single",tissue_name = tissue)[[1]] ; x <- x[[tissue_number]]
+      pcorr <- cor.test(as.numeric(x[pair_table[pair,1], ]),as.numeric(x[pair_table[pair,2], ]))
+      corr_store <- c(corr_store, pcorr$estimate)
+    }
+    corr_table <- rbind(corr_table, corr_store)
+  }
+  colnames(corr_table) <- tissue
+  
+  pair_table[ ,1] <- as.character(pair_table[ ,1])
+  pair_table[ ,2] <- as.character(pair_table[ ,2])
+  rownames(corr_table) <- paste0(pair_table[ ,1],"/",pair_table[ ,2])
+  return(corr_table)
+}
+
+target_1 <- c("MEK1")
+target_2 <- c("MTOR","MTORC1","MTORC2")
+corr_table_1 <- search_parwise_similarity_across_tissues(target_1,target_2)
+
+target_1 <- c("BRAF")
+target_2 <- c("MEK1","MEK2")
+corr_table_2 <- search_parwise_similarity_across_tissues(target_1,target_2)
+
+
+target_1 <- c("ABL")
+target_2 <- c("PI3K (class 1)","PI3Kgamma")
+corr_table_2 <- search_parwise_similarity_across_tissues(target_1,target_2)
+
+
+```
+
+
+
+
 

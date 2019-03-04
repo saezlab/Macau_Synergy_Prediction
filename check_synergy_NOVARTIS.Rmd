@@ -1,0 +1,296 @@
+---
+title: "check synergy"
+author: "MI YANG"
+date: "`r doc_date()`"
+package: "`r pkg_ver('BiocStyle')`"
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+---
+
+```{r include=FALSE, cache=FALSE}
+library(ggrepel)
+path <- "~/Documents/RWTH_Aachen"
+load(paste0(path,"/SANGER_DATA/MASTER_LIST_22112013.ro"))
+source(paste0(path,"/FUNCTIONS/PLOT.R", sep=""))
+source(paste0(path,"/MACAU_PROJECT/check_synergy_functions.R"))
+source(paste0(path,"/MACAU_PROJECT/interaction_matrix_Functions.R"))
+source(paste0(path,"/ML_CODE/crossvalidate_data/CrossVal_LIBRARY.R"))
+source(paste0(path,"/ML_CODE/ML/LIB_METRICS.R"))
+source(paste0(path,"/FUNCTIONS/EN_functions.R"))
+source(paste0(path,"/FUNCTIONS/general_functions.R"))
+
+target <- read.csv(paste0(path,"/macau_work_dir/macau_test_sanger/DATA/target"), check.names = F) ; drug_names <- target[ ,1] ; target <- target[ ,-1]
+DRUG_ANALYSIS_SET_update$Drug.Name <- DRUG_ANALYSIS_SET$DRUG_NAME
+target_to_remove <- c()
+for (i in 1:length(colnames(target))) {
+protein_target <- print_target_GDSC (protein_target= colnames(target)[i], target_matrix=target, drug_names=drug_names )
+if ( length(protein_target[,1]) == 1 ) { target_to_remove <- c(target_to_remove, i) }
+}
+target_to_remove <- c(target_to_remove , which(colnames(target) %in% c("others","not defined" ))  ) 
+
+tissue_table <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/tissue_table"), row.names=1, check.names = F)
+SYN_MATRIX <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/SYN_MATRIX"), row.names=1, check.names = F) ; SYN_MATRIX <- data.matrix(SYN_MATRIX)
+progeny <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/progeny11"), row.names=1, check.names = F)
+target_combo <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/target_combo"), row.names=1, check.names = F)
+tissue <- c("aero_dig_tract","bone","brain","breast","colon","kidney","leukemia","liver","lung_NSCLC","lung_SCLC","lymphoma","ovary","pancreas","skin","soft_tissue","stomach")
+
+```
+
+
+# BREAST result
+```{r include=FALSE, cache=FALSE}
+
+########################## BREAST: choose tissue and target combo ########################
+result_folder <- paste0(path,"/MACAU_PROJECT/PLOTS/DRUG_COMBO_PREDICTION/NOVARTIS_PDX/")
+
+tissue_name <- "breast"    ## we consider only cases with at least 10 cell lines ;   breast   lung_NSCLC   colon 
+SYN_MATRIX_tissue <- as.data.frame(SYN_MATRIX[ ,colnames(SYN_MATRIX) %in% tissue_table[which(tissue_table[  ,2]=="BRCA"),1] ])
+target_common_NOVARTIS_SANGER <- read.csv(paste0(path,"/DREAM_AZ/DATA/target_common_NOVARTIS_SANGER_",tissue_name), row.names=1)
+
+temp <- target_common_NOVARTIS_SANGER
+SYNERGY_store <- c()
+for(i in 1:length(temp[,1])) {
+  t<-c(as.character(temp$target1[i]),as.character(temp$target2)[i]); high<-c(); low<-c(); genomics<-c(); exclude<-c() 
+  ## see which drug combo act on those targets simultaneously
+  target_combo_pair <- target_combo[ ,t]
+  target_combo_pair <- target_combo_pair[-which(rowSums(target_combo_pair)<2), ] # sometimes, no drug combo targets the 2 targets at the same time !! therefore many NAs
+  SYN_MATRIX_pair <- SYN_MATRIX_tissue[rownames(target_combo_pair), ]
+  v <- as.numeric(data.matrix(SYN_MATRIX_pair)); v<-v[order(v)] ; v<-v[1]
+  SYNERGY_store <- c(SYNERGY_store, mean(v,na.rm=T) ) 
+}
+ 
+target_common_NOVARTIS_SANGER <- cbind(target_common_NOVARTIS_SANGER,SYNERGY_store)
+target_common_NOVARTIS_SANGER <- target_common_NOVARTIS_SANGER[complete.cases(target_common_NOVARTIS_SANGER), ]
+
+
+t<-c("BRAF","CDK6") ; high<-c("MAPK"); low<-c("NFkB")
+t<-c("MTOR","CDK6") ; high<-c("Trail"); low<-c("MAPK","TGFb")
+###############
+
+df <- check_SYNERGY_NOVARTIS(-1)[[1]]; scatter_plot_NOVARTIS(title=paste0(t[1],"/",t[2]," combination for ",length(rownames(df))," ",tissue_name," cell lines"),df=df )
+
+
+
+
+```
+
+
+
+
+# Does target functional footprint correlation affect TOP synergy in breast tissue?
+
+```{r include=FALSE, cache=FALSE}
+tissue_name <- "colon"    ## we consider only cases with at least 10 cell lines ;   breast   lung_NSCLC   colon 
+SYN_MATRIX_tissue <- as.data.frame(SYN_MATRIX[ ,colnames(SYN_MATRIX) %in% tissue_table[which(tissue_table[  ,2]=="CRC"),1] ])
+cell_names <- read.csv(paste0(path,"/SANGER_DATA/TISSUE/",tissue_name,"/progeny11"), row.names=1) ; cell_names <- ID_to_celllines(cell_names) ; cell_names <- rownames(cell_names)
+result_folder <- paste0(path,"/MACAU_PROJECT/PLOTS/DRUG_COMBO_PREDICTION/NOVARTIS_PDX/")
+
+target_common_NOVARTIS_SANGER <- read.csv(paste0(path,"/DREAM_AZ/DATA/target_common_NOVARTIS_SANGER_",tissue_name), row.names=1)
+
+
+# ## normalizing by cell line ? 
+# SYN_MATRIX_tissue <- scale(SYN_MATRIX_tissue, scale = F,center = T)
+# colMeans(SYN_MATRIX_tissue, na.rm=T)
+
+temp <- target_common_NOVARTIS_SANGER
+SYNERGY_store <- c()
+for(i in 1:length(temp[,1])) {
+  t<-c(as.character(temp$target1[i]),as.character(temp$target2)[i]); high<-c(); low<-c(); genomics<-c(); exclude<-c() 
+  ## see which drug combo act on those targets simultaneously
+  target_combo_pair <- target_combo[ ,t]
+  target_combo_pair <- target_combo_pair[-which(rowSums(target_combo_pair)<2), ] # sometimes, no drug combo targets the 2 targets at the same time !! therefore many NAs
+  SYN_MATRIX_pair <- SYN_MATRIX_tissue[rownames(target_combo_pair), ]
+  v <- as.numeric(data.matrix(SYN_MATRIX_pair)); v<-v[order(v)] ; v<-v[1]
+  SYNERGY_store <- c(SYNERGY_store, mean(v,na.rm=T) ) 
+}
+ 
+target_common_NOVARTIS_SANGER <- cbind(target_common_NOVARTIS_SANGER,SYNERGY_store)
+target_common_NOVARTIS_SANGER <- target_common_NOVARTIS_SANGER[complete.cases(target_common_NOVARTIS_SANGER), ]
+
+
+## remove targets from the same drug: 
+target_A <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/target_A"), row.names=1)
+target_B <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/target_B"), row.names=1)
+target_AB <- rbind(target_A,target_B)
+
+target_common_NOVARTIS_SANGER$target1 <- as.character(target_common_NOVARTIS_SANGER$target1)
+target_common_NOVARTIS_SANGER$target2 <- as.character(target_common_NOVARTIS_SANGER$target2)
+count <- c()
+for(i in 1:length(target_common_NOVARTIS_SANGER[ ,1])) {
+  t <- c(target_common_NOVARTIS_SANGER[i,1],target_common_NOVARTIS_SANGER[i,2])
+  if( length(which(colnames(target_AB) %in% t)) == 2 ) { 
+  subset <- target_AB[ , t ] ;  subset_AB <- subset[ which(rowSums(subset)==1) , ]
+  count <- c(count, length(unique(rownames(subset_AB))) )
+  } else { count <- c(count, 0 ) }
+}
+target_common_NOVARTIS_SANGER <- target_common_NOVARTIS_SANGER[ -which(count==0) , ]
+
+# target_common_NOVARTIS_SANGER <- target_common_NOVARTIS_SANGER[ -which(target_common_NOVARTIS_SANGER$target1 == "EGFR") , ]
+
+target_common_NOVARTIS_SANGER$corr <- as.numeric(as.character(target_common_NOVARTIS_SANGER$corr))
+df <- data.frame(cbind(target_common_NOVARTIS_SANGER$corr,target_common_NOVARTIS_SANGER$SYNERGY_store)) ; colnames(df) <- c("a","b")
+rownames(df) <- rownames(target_common_NOVARTIS_SANGER)
+
+df_abs <- df ; df_abs$a <- abs(df_abs$a)
+scatter_plot_normal <- function(df,title,x_lab,y_lab,switch_anchor=F,text_size=33,title_size=2.5 ) {
+  # equation, correlation and p value
+  out <- cor.test(df$a,df$b) ; r <- out$estimate ; p <- out$p.value
+  lm_eqn <- function(df){
+    m <- lm(b ~ a, df);
+    eq <- substitute(~~italic("r")~"="~r*","~~italic("p")~"="~p,
+                     list(a = format(coef(m)[1], digits = 2), 
+                          b = format(coef(m)[2], digits = 2), 
+                          r = format(r, digits = 2),
+                          p = format(p, digits=2)))
+    as.character(as.expression(eq));                 
+  }
+  g <- ggplot(df, aes(a, b, color = b)) + 
+    geom_point(shape = 16, size = 8, show.legend = FALSE, alpha = .8 ) +  geom_smooth(method=lm,se=F,show.legend=F) + 
+    labs(x =x_lab, y=y_lab) + ggtitle(title) + 
+    theme(legend.position="bottom",axis.text=element_text(size= text_size) , axis.title= element_text(size=text_size), plot.title = element_text(size=rel(title_size), hjust=0.5),
+          panel.background = element_rect(fill='white'),panel.grid.major = element_line(colour = "grey90") ) + 
+    geom_text(x = min(df$a) + 0.5*(max(df$a)-min(df$a)), y = min(df$b), label = lm_eqn(df), parse = TRUE,show.legend=F,color="black",size = 15) + 
+    scale_color_gradient(low = "#0091ff", high = "#f0650e" ) #  
+  g
+}
+
+
+pdf(file=paste0(result_folder,tissue_name,"_","NOVARTIS_SANGER_common_target_synergy_STATISTICS.pdf"), width = 10, height = 10,  compress=TRUE, onefile = F)
+scatter_plot_normal(df=df_abs,title=paste0("Target combinations (",tissue_name,")"),x_lab="Absolute Target functional similarity",y_lab="Average Synergy of top drug combinations")
+dev.off()
+
+scatter_plot <- function(title,df,text_size=33,title_size=2.5,method="loess") {
+  top_hits  <- df[ which(df$b<0) , ] ; label_top_hits <- rownames(top_hits)
+#  top_hits  <- df[ with(df, b <= 50 & b >= 30) , ] ; top_hits <- top_hits[complete.cases(top_hits), ] ; label_top_hits <- rownames(top_hits)
+  rest  <- df[ which(rownames(df) %not in% label_top_hits) , ] ; label_rest <- rownames(rest)
+  g <- ggplot(df, aes(a, b, color=b)) + 
+    geom_point(shape = 16, size = 7, show.legend = FALSE, alpha = 0.9 ) +  geom_smooth(method=method,se=F,show.legend=F) + 
+    labs(x = "Target functional similarity", y="Average Synergy of Top drug combinations" ) + ggtitle(title) + 
+    theme(legend.position="none",axis.text=element_text(size= text_size) , axis.title= element_text(size=text_size), plot.title = element_text(size =rel(title_size), hjust = 0.5 ),
+    panel.background = element_rect(fill='white'),panel.grid.major = element_line(colour = "grey90") ) + 
+    # geom_text_repel(data=rest ,aes(label=label_rest ), size=4 , color="black") + 
+    geom_text_repel(data=top_hits ,aes(label=label_top_hits), size=9, color="black", force = 1.5) + 
+    scale_color_gradient(low = "#0091ff", high = "#990000" ) #  #0091ff #990000
+  g
+} 
+
+pdf(file=paste0(result_folder,tissue_name,"_","NOVARTIS_SANGER_common_target_synergy.pdf"), width = 16, height = 16,  compress=TRUE, onefile = F)
+scatter_plot(title=paste0("Target combinations (",tissue_name,")"),df=df)
+dev.off()
+
+pdf(file=paste0(result_folder,tissue_name,"_","NOVARTIS_SANGER_common_target_synergy_Small.pdf"), width = 10, height = 10,  compress=TRUE, onefile = F)
+scatter_plot(title=paste0("Target combinations (",tissue_name,")"),df=df)
+dev.off()
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Check synergy based on target functional similarity of protein targets of the same drug. NOVARTIS. LACK OF DRUGS !!!
+```{r include=FALSE, cache=FALSE}
+
+result_folder <- paste0(path,"/MACAU_PROJECT/PLOTS/DRUG_COMBO_PREDICTION/NOVARTIS_PDX/")
+SYN_MATRIX <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/SYN_MATRIX"), row.names=1, check.names = F) ; SYN_MATRIX <- data.matrix(SYN_MATRIX)
+target_A <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/target_A"), row.names=1)
+target_B <- read.csv(paste0(path,"/DREAM_AZ/DATA_NOVARTIS_PDX/target_B"), row.names=1)
+
+tissue_name <- "lung_NSCLC"  ; tissue_number = which(tissue==tissue_name)  ## we consider only cases with at least 10 cell lines ;   breast   lung_NSCLC   colon 
+cell_names <- read.csv(paste0(path,"/SANGER_DATA/TISSUE/",tissue_name,"/progeny11"), row.names=1) ; cell_names <- ID_to_celllines(cell_names) ; cell_names <- rownames(cell_names)
+SYN_MATRIX_tissue <- as.data.frame(SYN_MATRIX[ ,colnames(SYN_MATRIX) %in% tissue_table[which(tissue_table[  ,2]=="NSCLC"),1] ])
+
+mat_list <- retrieve_interaction_plot(drug_feature_name="target",cell_feature_name="progeny11",selection="all_target",cut_off="single",tissue_name =  tissue) [[1]]
+interaction_matrix <- mat_list[[tissue_number]] ## 4 for breast
+
+target_AB <- rbind(target_A,target_B)
+# target_AB <- target_AB[ ,-which(colnames(target_AB) == "AKT2") ]
+common_target <- intersect(rownames(interaction_matrix), colnames(target_AB))
+interaction_matrix <- interaction_matrix[common_target, ]
+target_AB <- target_AB[ ,common_target]
+target_AB <- target_AB[ which(rowSums(target_AB) >= 2) , ]
+ 
+
+within_drug_correlation_score <- c()
+for(i in 1:length(rownames(target_AB))){  ##   i=1
+  temp <- colnames(target_AB)[ which(target_AB[i, ]==1) ] 
+  interaction_temp <- t(interaction_matrix[temp, ])
+  cor_mat <- cor(interaction_temp)
+  corr_vect <- as.numeric(cor_mat)  ; corr_vect <- corr_vect[-which(corr_vect==1)]
+  within_drug_correlation_score <- c(within_drug_correlation_score ,  abs(mean(corr_vect))  )  ## abs(mean(corr_vect))
+}
+
+single_drug_average_synergy <- c()
+for(i in 1:length(rownames(target_AB))){  ##   i=1
+  temp <- rownames(target_AB)[i]
+  SYN_MATRIX_tissue_temp <- SYN_MATRIX_tissue[grep(temp, rownames(SYN_MATRIX_tissue)), ]
+  top_synergy <- as.numeric(data.matrix(SYN_MATRIX_tissue_temp)) ; top_synergy <- top_synergy[!is.na(top_synergy)]
+  top_synergy <- top_synergy[which(top_synergy > quantile(top_synergy, 0.90) ) ]
+  single_drug_average_synergy <- c( single_drug_average_synergy , mean( top_synergy ) ) 
+}
+
+result <- cbind(within_drug_correlation_score, single_drug_average_synergy) ; result <- result[complete.cases(result), ]
+# result_lung_NSCLC <- result  result_breast <- result    result_colon <- result 
+
+scatter_plot <- function(df,title,x_lab,y_lab,switch_anchor=F,text_size=33,title_size=2.5 ) {
+  # equation, correlation and p value
+  df <- as.data.frame(df) ; colnames(df) <- c("a","b")
+  out <- cor.test(df$a,df$b) ; r <- out$estimate ; p <- out$p.value
+  lm_eqn <- function(df){
+    m <- lm(b ~ a, df);
+    eq <- substitute(~~italic("r")~"="~r*","~~italic("p")~"="~p,
+                     list(a = format(coef(m)[1], digits = 2), 
+                          b = format(coef(m)[2], digits = 2), 
+                          r = format(r, digits = 2),
+                          p = format(p, digits=2)))
+    as.character(as.expression(eq));                 
+  }
+  g <- ggplot(df, aes(a, b, color = b)) + 
+    geom_point(shape = 16, size = 10, show.legend = FALSE, alpha = .9 ) +  geom_smooth(method=lm,se=F,show.legend=F) + 
+    labs(x =x_lab, y=y_lab) + ggtitle(title) + 
+    theme(legend.position="bottom",axis.text=element_text(size= text_size) , axis.title= element_text(size=text_size), plot.title = element_text(size=rel(title_size), hjust=0.5),
+          panel.background = element_rect(fill='white'),panel.grid.major = element_line(colour = "grey90") ) + 
+    geom_text(x = min(df$a) + 0.5*(max(df$a)-min(df$a)), y = min(df$b) + 0*(max(df$b)-min(df$b)), label = lm_eqn(df), parse = TRUE,show.legend=F,color="black",size = 18 ) + 
+    scale_color_gradient(low = "#f0650e", high = "#f0650e" ) #  
+  g
+}
+
+
+
+result_breast_scale <- cbind(result_breast[,1], scale(result_breast[,-c(1)]) ) 
+result_lung_NSCLC_scale <- cbind(result_lung_NSCLC[,1], scale(result_lung_NSCLC[,-c(1)]) ) 
+result <- rbind(result_breast_scale, result_lung_NSCLC_scale)
+
+scatter_plot(result,x_lab="Internal functional similarity (abs)", y_lab = "Average synergy of the drug", title=paste0("Single compound synergy fitness"," (",tissue_name,")") ) 
+
+
+
+```
+
+
+
+
+
+
+
+

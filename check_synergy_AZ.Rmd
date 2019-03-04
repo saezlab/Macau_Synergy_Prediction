@@ -222,7 +222,7 @@ scatter_plot_normal <- function(df,title,x_lab,y_lab,switch_anchor=F,text_size=3
     eq <- substitute(~~italic("r")~"="~r*","~~italic("p")~"="~p,
                      list(a = format(coef(m)[1], digits = 2), 
                           b = format(coef(m)[2], digits = 2), 
-                          r = format(r, digits = 2),
+                          r = format(unname(r), digits = 2),
                           p = format(p, digits=2)))
     as.character(as.expression(eq));                 
   }
