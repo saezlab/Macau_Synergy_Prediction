@@ -5,7 +5,7 @@ library(gridExtra) # for arranging plots
 library(beeswarm)
 library(ggrepel)
 
-scatter_plot <- function(df,title,x_lab,y_lab,switch_anchor=F,text_size=33,title_size=2.5 ) {
+scatter_plot <- function(df,title,x_lab,y_lab,switch_anchor=F,text_size=33,title_size=2.5,coeff_x=0.5) {
   # equation, correlation and p value
   df <- as.data.frame(df) ; colnames(df) <- c("a","b")
   out <- cor.test(df$a,df$b) ; r <- out$estimate ; p <- out$p.value
@@ -14,17 +14,16 @@ scatter_plot <- function(df,title,x_lab,y_lab,switch_anchor=F,text_size=33,title
     eq <- substitute(~~italic("r")~"="~r*","~~italic("p")~"="~p,
                      list(a = format(coef(m)[1], digits = 2), 
                           b = format(coef(m)[2], digits = 2), 
-                          r = format(r, digits = 2),
-                          p = format(p, digits=2)))
+                          r = format(unname(r), digits = 2),
+                          p = format(p, digits=4)))
     as.character(as.expression(eq));                 
   }
-  g <- ggplot(df, aes(a, b, color = b)) + 
-    geom_point(shape = 16, size = 10, show.legend = FALSE, alpha = .9 ) +  geom_smooth(method=lm,se=F,show.legend=F) + 
+  g <- ggplot(df, aes(a, b)) + 
+    geom_point(shape = 16, size = 10, show.legend = FALSE, alpha = .7, color = "darkred" ) +  geom_smooth(method=lm,se=F,show.legend=F ) + 
     labs(x =x_lab, y=y_lab) + ggtitle(title) + 
     theme(legend.position="bottom",axis.text=element_text(size= text_size) , axis.title= element_text(size=text_size), plot.title = element_text(size=rel(title_size), hjust=0.5),
           panel.background = element_rect(fill='white'),panel.grid.major = element_line(colour = "grey90") ) + 
-    geom_text(x = min(df$a) + 0.5*(max(df$a)-min(df$a)), y = min(df$b) + 0*(max(df$b)-min(df$b)), label = lm_eqn(df), parse = TRUE,show.legend=F,color="black",size = 18 ) + 
-    scale_color_gradient(low = "#f0650e", high = "#0091ff" ) #  
+    geom_text(x = min(df$a) + coeff_x*(max(df$a)-min(df$a)), y = min(df$b) + 0*(max(df$b)-min(df$b)), label = lm_eqn(df), parse = TRUE,show.legend=F,color="black",size = 18 )  
   g
 }
 
@@ -285,19 +284,26 @@ subset_row_up <- function(mat, up_limit , obs) {
   return(r)
 }
 
-subset_row_down <- function(mat, down_limit , obs) {
-  value <- as.matrix(mat)
-  value <- as.numeric(value)
-#  value <- value[!is.na(value)]
-  th <- quantile( value , down_limit )
-  
+subset_row_up_threshold <- function(mat, threshold , obs) {
   redoheatmap <- c() ;  
   for (i in 1:nrow(mat)) {
-    if ( length( which(  mat[ i,]  < th ) ) >= obs ) {
+    if ( length( which( mat[ i , ] > threshold ) ) >= obs ) {
       redoheatmap <- c(redoheatmap, rownames(mat)[i]) 
     }
   }
-  r <- mat[redoheatmap , ] 
+  r <- mat[ redoheatmap , ] 
+  return(r)
+}
+
+
+subset_row_down_threshold <- function(mat, threshold , obs) {
+  redoheatmap <- c() ;  
+  for (i in 1:nrow(mat)) {
+    if ( length( which( mat[ i , ] < threshold ) ) >= obs ) {
+      redoheatmap <- c(redoheatmap, rownames(mat)[i]) 
+    }
+  }
+  r <- mat[ redoheatmap , ] 
   return(r)
 }
 
@@ -543,7 +549,7 @@ comparison_plot <- function(baseline,baseline_name,comparison, comparison_name,l
     geom_point(data=tab_up_down,aes(x=index,y=comparison),size=2) +  
     ggtitle(paste0("Comparison of ",comparison_name," vs ",baseline_name," (baseline)")) + 
     xlab(xlab) + ylab(ylab) + scale_colour_manual(name=legend, values=c(baseline="violetred3",comparison= "steelblue3")) + 
-    theme(legend.position="bottom", text = element_text(size=text_size), axis.text=element_text(size= text_size) , axis.title= element_text(size= text_size), plot.title = element_text(size = rel(title_size), hjust = 0.5 ), panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90")) + 
+    theme(legend.position="bottom", text = element_text(size=text_size), axis.text=element_text(size= text_size) , axis.title= element_text(size= text_size), plot.title = element_text(size = title_size, hjust = 0.5 ), panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90")) + 
     geom_text_repel(data=tab_up_down ,aes(label=label), size=5 )  
 }
 

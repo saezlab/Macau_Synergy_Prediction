@@ -4,7 +4,7 @@
 movetolast <- function(data, move) {  data[c(setdiff(names(data), move), move)] }
 normalization_01 <- function(x) { x <- (x-min(x,na.rm=T))/(max(x,na.rm=T)-min(x,na.rm=T)) ; return(x) }
 ## vapply(strsplit( vector , split="[.]"), "[", "", 1) take first element of a split 
-## library(readxl) read_excel library(openxlsx)
+## read_excel:  library(readxl) library(openxlsx)
 ########################  decompose tissues  ########################
 
 retrieve_tissue <- function(name, tissue_label, features, mutation, response, tissue) { 
@@ -271,6 +271,7 @@ load_folder <- function (workdir ) {
     n <- n + 1
     imp[[n]] <- read.csv(paste(workdir, "/",files[n], sep = ""), row.names = 1 , check.names = T)
   }
+  names(imp) <- files
   return(imp)
 }
 
@@ -473,9 +474,8 @@ create_features <- function(mat, column) {
   return(m)
 }
 
-create_features_dummy <- function(mat, column) {
+create_features_dummy <- function(features, column) {
   
-  features <- mat
   col <- which(colnames(features) == column)
   
   features[ ,col] <- as.character(features[ ,col])
@@ -510,6 +510,49 @@ create_features_dummy <- function(mat, column) {
 }
 
 
+create_features_dummy_MANY <- function(features, range=3:8) {
+  
+  col <- range
+  
+  mat_combined <- matrix(data=NA,nrow=length(rownames(features)), ncol = 1)
+  for(i in 1:length(col)) {   #   col[1]
+    features[ ,col[i]] <- as.character(features[ ,col[i]])
+    features[is.na(features[ ,col[i]]) , col[i] ] <- "unknown"
+    target <- as.character( features[ ,col[i]] ) 
+    target <- gsub("[[:blank:]]", "", target)
+    target = strsplit(target, ",")  
+    target <- unlist(target, recursive = TRUE, use.names = TRUE) ; target <- unique(target)
+    
+    m <- matrix(nrow= length(target) , ncol = length(features[,1]) )
+    rownames(m) <- target  ;  colnames(m) <- rownames(features)
+    
+    for(j in 1:length(colnames(m))) {
+      a <- as.character( features[ ,col[i]][j] ) 
+      a <- gsub("[[:blank:]]", "", a)
+      a = strsplit(a, ",")  ; a <- a[[1]]
+      
+      library(stringdist)
+      ClosestMatch2 = function(string, stringVector){  stringVector[amatch(string, stringVector, maxDist=Inf)] }
+      match <- ClosestMatch2 (a,  rownames(m))
+      
+      m[ which(rownames(m) %in% match ) , j ] <- 1
+    }
+    m[is.na(m)] <- 0
+    # print(rowSums(m)) ; print(colSums(m))
+    m <-t(m)
+    if(length(which(colnames(m) == "unknown" )==1)) {
+      m <- m[ , -which(colnames(m) == "unknown" ) ]
+    }
+    reference <- colnames(m)[1] ; m <- m[ ,-1]
+    mat_combined <- cbind(mat_combined, m)
+  }
+  
+  mat_combined <- mat_combined[ , -1]
+  return(mat_combined)
+}
+
+
+
 corr_by_row <- function(mat1, mat2, method="pearson")  {
   mat1 <- as.matrix(mat1)
   mat2 <- as.matrix(mat2) 
@@ -529,6 +572,7 @@ corr_by_row <- function(mat1, mat2, method="pearson")  {
   names(corr_vec) <- rownames(mat1)
   return(corr_vec)
 }
+
 
 rmse_by_row <- function(mat1, mat2)  {
   mat1 <- as.matrix(mat1)
@@ -643,11 +687,6 @@ make_combo <- function(vector, element=2) {
   return(list_of_combo)
 }
 
-normalization_01 <- function(x) {
-  for(i in 1:length(x[1, ])) { x[ ,i] <- (x[ ,i]-min(x[ ,i],na.rm=T))/(max(x[ ,i],na.rm=T)-min(x[ ,i],na.rm=T)) } 
-  return(x)
-}
-
 quantile_normalisation <- function(df){
   df_rank <- apply(df,2,rank,ties.method="min")
   df_sorted <- data.frame(apply(df, 2, sort))
@@ -689,7 +728,7 @@ for(i in 1:length(vector_row)) {
   for(j in 1:length(vector_column)) {
     tryCatch({
       query <- paste("(",vector_row[i]," AND ",vector_column[j]," AND ",constant_term,")", sep = "" )
-      mindate=2000 ; maxdate=2018
+      mindate=2008 ; maxdate=2018
       ngs_search <- EUtilsSummary(query, type="esearch",db = "pubmed",mindate=mindate, maxdate=maxdate, retmax=500)
       m[i,j] <- QueryCount(ngs_search)
     }, error=function(e){})
@@ -705,7 +744,7 @@ change_name <- function( to_change , to_change_name , reference_name ) {
 }
 
 binarize_by_column <- function(mat, th, binary=F) {
-  for(i in 1:length(colnames(mat)) ){
+  for(i in 1:length(colnames(mat)) ){ # i=1
     limit <- quantile(mat[ ,i], th)
     mat[ ,i][mat[ ,i]<limit]  <- "low" 
     mat[ ,i][mat[ ,i] %not in% "low"] <- "high" 
