@@ -78,64 +78,15 @@ target_combo_pathway <- function(mat, top_association,  correlation)  {
   return(L)
 }
 
-## drug_feature_name="target" ; cell_feature_name="GEX_SLC_ABC" ; selection="conservative" ; cut_off="single" ; N=9
-save_interaction_plot <- function(drug_feature_name,cell_feature_name,selection,cut_off,N = 1:length(f) , limit_row=0.95,limit_col=0.95,significance=0.05) {
-  path2 <- paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_GDSC/",drug_feature_name,"_",cell_feature_name,"/MEAN/" )
-  path_permutation <- paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_GDSC/",drug_feature_name,"_",cell_feature_name,"_PERMUTATION/" )
-  setwd(path2) ; f <- list.files(path2)
-  for(i in N) {
-    x <- read.csv(f[i], row.names=1)
-    rownames(x)[grep("G9a and GLP methyltransferases",rownames(x))] <- "G9a and GLP"
-    rownames(x)[grep("dsDNA break induction",rownames(x))] <- "dsDNA break"
-    rownames(x)[grep("FNTA",rownames(x))] <- "FNTA"
-    
-    ##################### decide about target selection: conservative or all
-    if(selection == "conservative") { x <- x[ - target_to_remove ,  ] ; mat <- x }
-    if(selection == "conservative_include_BIRC5") { mat <- x[ - target_to_remove ,  ] ; mat <- rbind(mat,x["BIRC5", ]) }
-    if(selection == "all_target") {  mat <- x }
-    ##################### decide about target cut off: single top hit of sum across all
-    if(cut_off=="absolute") {
-      v <- apply(mat,1,var) ;  v <- v[ order(-abs(v)) ] ; mat <- mat[ names(v)[1:25] , ]
-      if(cell_feature_name %not in% c("progeny11","progeny14") ){ 
-      mat <- subset_col_abs(mat, abs_limit = limit_col, obs=1) ;  v <- apply(mat,2,var) ;  v <- v[ order(-abs(v)) ] ; mat <- mat[ , names(v)[1:25] ]
-      } 
-    }
-    if(cut_off=="single") {
-      mat <- subset_row_abs(mat, abs_limit = limit_row, obs=1) ;  v <- apply(mat,1,var) ;  v <- v[ order(-abs(v)) ] ; mat <- mat[ names(v)[1:25] , ]
-      if(cell_feature_name %not in% c("progeny11","progeny14") ){ 
-      mat <- subset_col_abs(mat, abs_limit = limit_col, obs=1) ;  v <- apply(mat,2,var) ;  v <- v[ order(-abs(v)) ] ; mat <- mat[ , names(v)[1:25] ]
-      } 
-    }
-    mat <- mat[complete.cases(mat),]
-    tissue <- regmatches(f[i], regexpr('interaction.+?target', f[i])) ; tissue <- gsub('.{7}$', '', tissue) ; tissue <- substring(tissue, 13)
-    
-    interaction_pvalue_CORRECTED <- read.csv(paste0(path_permutation,tissue,"/interaction_pvalue_CORRECTED"), row.names = 1)
-    interaction_pvalue_CORRECTED <- interaction_pvalue_CORRECTED[rownames(mat),colnames(mat)]
-    
-    pdf(paste0(path,"/MACAU_PROJECT/PLOTS/GDSC_",drug_feature_name,"_",cell_feature_name,"/",selection,'/',cut_off,'/',tissue,".pdf" ), width = 14.6 , height = 15.5, onefile = F ) # width = 14 , height = 15
-    
-    library(pheatmap) ; library(grid)
-    plot_pheatmap <- function(mat, row_names, col_names , title ,cluster_rows=T,cluster_cols=T,fontsize=33,fontsize_row=33, fontsize_col=33, scale="none") {
-      setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.95, name="vp", just=c("right","top"))), action="prepend")
-      pheatmap(mat, main=title, fontsize=fontsize, fontsize_row=fontsize_row,fontsize_col=fontsize_col,cluster_rows = cluster_rows, cluster_cols = cluster_cols,scale=scale,
-               display_numbers = matrix(ifelse(interaction_pvalue_CORRECTED < significance, "*", ""), nrow(interaction_pvalue_CORRECTED)))
-      setHook("grid.newpage", NULL, "replace")
-      grid.text(row_names, x=-0.03, rot=90, gp=gpar(fontsize=36))
-      grid.text(col_names, y=0.01, gp=gpar(fontsize=36)  )
-    }
-    plot_pheatmap(mat, "Drug target" , cell_feature_name , tissue ) 
-    dev.off()
-  }
-  return(mat)
-}
+
 
 # database="GDSC" ; drug_feature_name="target" ; cell_feature_name="progeny11" ; selection="conservative" ; cut_off="single" ; significance=0.40 ; limit_row=0.95 ; limit_col=0.95
-significance_interaction_plot <- function(drug_feature_name,cell_feature_name,selection,cut_off,N = 1:length(f), database="GDSC",target_to_remove=target_to_remove, limit_row=0.95,limit_col=0.95) {
+significance_interaction_plot <- function(database="GDSC",drug_feature_name,cell_feature_name,selection,cut_off,N = 1:length(f), limit_row=0.95,limit_col=0.95) {
   path2 <- paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_",database,"/",drug_feature_name,"_",cell_feature_name,"/MEAN/" )
   path_permutation <- paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_",database,"/",drug_feature_name,"_",cell_feature_name,"_PERMUTATION/" )
-  setwd(path2) ; f <- list.files(path2)
+  f <- list.files(path2)
   for(i in N) {  #  N = 16
-    x <- read.csv(f[i], row.names=1)
+    x <- read.csv(paste0(path2,f[i]), row.names=1)
     rownames(x)[grep("G9a and GLP methyltransferases",rownames(x))] <- "G9a and GLP"
     rownames(x)[grep("dsDNA break induction",rownames(x))] <- "dsDNA break"
     rownames(x)[grep("FNTA",rownames(x))] <- "FNTA"
@@ -164,12 +115,13 @@ significance_interaction_plot <- function(drug_feature_name,cell_feature_name,se
 #  return(pvalue_mat)
 }
 
-
-save_interaction_plot_quantile <- function(folder,drug_feature_name,cell_feature_name,selection,cut_off,N = 1:length(f) , limit_row=0.95,limit_col=0.95) {
-  path2 <- paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_GDSC/",drug_feature_name,"_",cell_feature_name,"/" )
-  setwd(path2) ; f <- list.files(path2)
+## drug_feature_name="target" ; cell_feature_name="GEX_SLC_ABC" ; selection="conservative" ; cut_off="single" ; N=9
+save_interaction_plot <- function(drug_feature_name,cell_feature_name,selection,cut_off,N = 1:length(f) , limit_row=0.95,limit_col=0.95,significance=0.05) {
+  path2 <- paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_GDSC/",drug_feature_name,"_",cell_feature_name,"/MEAN/" )
+  path_permutation <- paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_GDSC/",drug_feature_name,"_",cell_feature_name,"_PERMUTATION/" )
+  f <- list.files(path2)
   for(i in N) {
-    x <- read.csv(f[i], row.names=1)
+    x <- read.csv(paste0(path2,f[i]), row.names=1)
     rownames(x)[grep("G9a and GLP methyltransferases",rownames(x))] <- "G9a and GLP"
     rownames(x)[grep("dsDNA break induction",rownames(x))] <- "dsDNA break"
     rownames(x)[grep("FNTA",rownames(x))] <- "FNTA"
@@ -186,16 +138,29 @@ save_interaction_plot_quantile <- function(folder,drug_feature_name,cell_feature
       } 
     }
     if(cut_off=="single") {
-      mat <- subset_row_abs(mat, abs_limit = limit_row, obs=1) ;  v <- apply(mat,1,var) ; v <- v[ order(-abs(v)) ] ; mat <- mat[ names(v)[1:20] , ]
+      mat <- subset_row_abs(mat, abs_limit = limit_row, obs=1) ;  v <- apply(mat,1,var) ;  v <- v[ order(-abs(v)) ] ; mat <- mat[ names(v)[1:25] , ]
       if(cell_feature_name %not in% c("progeny11","progeny14") ){ 
-        mat <- subset_col_abs(mat, abs_limit = limit_col, obs=1) ;  v <- apply(mat,2,var) ; v <- v[ order(-abs(v)) ] ; mat <- mat[ , names(v)[1:20] ]
+        mat <- subset_col_abs(mat, abs_limit = limit_col, obs=1) ;  v <- apply(mat,2,var) ;  v <- v[ order(-abs(v)) ] ; mat <- mat[ , names(v)[1:25] ]
       } 
     }
     mat <- mat[complete.cases(mat),]
-    mat <- quantile_normalisation(mat)  ####### NORMALIZATION
     tissue <- regmatches(f[i], regexpr('interaction.+?target', f[i])) ; tissue <- gsub('.{7}$', '', tissue) ; tissue <- substring(tissue, 13)
-    pdf(paste0(path,"/",folder,"/PLOTS/GDSC_",drug_feature_name,"_",cell_feature_name,"/",selection,'/',cut_off,'/',tissue,".pdf" ), width = 17 , height = 15, onefile = F ) # 13.5 15
-    plot_pheatmap(mat,"Drug target",cell_feature_name,tissue) 
+    
+    interaction_pvalue_CORRECTED <- read.csv(paste0(path_permutation,tissue,"/interaction_pvalue_CORRECTED"), row.names = 1)
+    interaction_pvalue_CORRECTED <- interaction_pvalue_CORRECTED[rownames(mat),colnames(mat)]
+    
+    pdf(paste0(path,"/MACAU_PROJECT/PLOTS/GDSC_",drug_feature_name,"_",cell_feature_name,"/",selection,'/',cut_off,'/',tissue,".pdf" ), width = 14.6 , height = 15.5, onefile = F ) # width = 14 , height = 15
+    
+    library(pheatmap) ; library(grid)
+    plot_pheatmap <- function(mat, row_names, col_names , title ,cluster_rows=T,cluster_cols=T,fontsize=33,fontsize_row=33, fontsize_col=33, scale="none") {
+      setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.95, name="vp", just=c("right","top"))), action="prepend")
+      pheatmap(mat, main=title, fontsize=fontsize, fontsize_row=fontsize_row,fontsize_col=fontsize_col,cluster_rows = cluster_rows, cluster_cols = cluster_cols,scale=scale,
+               display_numbers = matrix(ifelse(interaction_pvalue_CORRECTED < significance, "*", ""), nrow(interaction_pvalue_CORRECTED)))
+      setHook("grid.newpage", NULL, "replace")
+      grid.text(row_names, x=-0.03, rot=90, gp=gpar(fontsize=36))
+      grid.text(col_names, y=0.01, gp=gpar(fontsize=36)  )
+    }
+    plot_pheatmap(mat, "Drug target" , cell_feature_name , tissue ) 
     dev.off()
   }
   return(mat)
