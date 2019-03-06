@@ -17,7 +17,7 @@ https://github.com/saezlab/Macau_project_1
 
 Use the following scripts (**check_synergy_AZ.Rmd**,**check_synergy_SANGER.Rmd**) to compute the Delta Pathway Activity and predict synergy on new cell lines.
 
-## Validation on the NCI-ALMANAC dataset 
+## Application to the NCI-ALMANAC dataset 
 **check_synergy_ALMANAC.Rmd**
 
 
