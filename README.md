@@ -15,7 +15,7 @@ https://github.com/saezlab/Macau_project_1
 
 **GDSC_DRUG_COMBO_TOP_HITS.Rmd**: Use this script and result from previous publication to find pathways predictive of synergy. 
 
-Use the following scripts (**check_synergy_AZ.Rmd**,**check_synergy_SANGER.Rmd**) to compute the Delta Pathway Activity from the pathways previously found and predict synergy on new cell lines.
+Use the following scripts (**check_synergy_AZ.Rmd** for AstraZeneca,**check_synergy_SANGER.Rmd** for Sanger validation) to compute the Delta Pathway Activity from the pathways previously found and predict synergy on new cell lines.
 
 ## Application to the NCI-ALMANAC dataset 
 **check_synergy_ALMANAC.Rmd**
