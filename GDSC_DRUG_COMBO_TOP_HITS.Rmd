@@ -1,5 +1,5 @@
 ---
-title: "A multi-task learning framework to uncover orthogonal feature interactions in large scale drug screening experiments"
+title: "A multi-task learning framework to uncover feature interactions in large scale drug screening experiments"
 author: "MI YANG"
 date: "`r doc_date()`"
 package: "`r pkg_ver('BiocStyle')`"
@@ -355,66 +355,6 @@ all_combo_target <- cbind(all_combo_target , corr )
 all_combo_target <- all_combo_target[order(-as.numeric(all_combo_target[ ,3]) ) , ]  ; colnames(all_combo_target)[1:2] <- c("target1","target2") 
 rownames(all_combo_target) <- paste(all_combo_target[ ,1],all_combo_target[ ,2],sep="/")
 target_SANGER_colon <- all_combo_target ;  storedata(target_SANGER_colon, paste0(path,"/DREAM_AZ/DATA") )
-
-
-### MERCK
-tissue_name <- "skin"  ; tissue_number = which(tissue==tissue_name) 
-
-x <- retrieve_interaction_plot(drug_feature_name="target",cell_feature_name="progeny11",selection="conservative",cut_off="single",tissue_name = tissue)[[1]] ; x <- x[[tissue_number]]
-target_SANGER <- rownames(x)
-target_combo <- read.csv(paste0(path,"/DREAM_AZ/DATA_MERCK/target_combo"), row.names=1, check.names = F)
-target_MERCK <- colnames(target_combo)
-match <- match (target_SANGER,  target_MERCK) ; table <- cbind(target_SANGER, match) ; table <- table[complete.cases(table), ]
-target_common <- table[,1]
-
-all_combo_target <- t(combn(target_common, m=2))
-corr <- c()
-for(i in 1:length(all_combo_target[,1])) {   c <- cor.test(as.numeric(x[ all_combo_target[i,1], ]),as.numeric(x[ all_combo_target[i,2], ]) ) ; corr <- c(corr, c$estimate) }
-all_combo_target <- cbind(all_combo_target , corr )
-all_combo_target <- all_combo_target[order(-as.numeric(all_combo_target[ ,3]) ) , ]  ; colnames(all_combo_target)[1:2] <- c("target1","target2") 
-rownames(all_combo_target) <- paste(all_combo_target[ ,1],all_combo_target[ ,2],sep="/")
-
-target_common_MERCK_SANGER_ovary <- all_combo_target ;  storedata(target_common_MERCK_SANGER_ovary,paste0(path,"/DREAM_AZ/DATA_MERCK"))
-target_common_MERCK_SANGER_skin <- all_combo_target ;  storedata(target_common_MERCK_SANGER_skin,paste0(path,"/DREAM_AZ/DATA_MERCK"))
-target_common_MERCK_SANGER_colon <- all_combo_target ;  storedata(target_common_MERCK_SANGER_colon,paste0(path,"/DREAM_AZ/DATA_MERCK"))
-target_common_MERCK_SANGER_lung_NSCLC <- all_combo_target ;  storedata(target_common_MERCK_SANGER_lung_NSCLC,paste0(path,"/DREAM_AZ/DATA_MERCK"))
-
-
-```
-
-
-
-# Check functional similarity and Omnipath distance
-
-```{r include=FALSE, cache=FALSE}
-
-TFS <- read.csv(paste0(path,"/DREAM_AZ/DATA/target_common_AZ_SANGER_breast"), row.names = 1)
-# TFS <- data.frame(all_combo_target)
-
-library(igraph)
-interaction_gene <- read.csv(paste0(path,"/TUTORIALS/OMNIPATH/DATA/interaction_gene"), row.names=1)
-graph <- graph_from_data_frame(interaction_gene)
-d <- distances(graph ) 
-
-common <- intersect( TFS$target1 , rownames(d)  ) 
-TFS <- TFS[TFS$target1 %in% common , ]
-TFS <- TFS[TFS$target2 %in% common , ]
-d <- d[common, common]
-
-distance <- c()
-for(i in 1:length(TFS$target1)) {
-  distance <- c( distance , d[ as.character(TFS[i,1]) , as.character(TFS[i,2]) ]  )
-}
-
-TFS <- cbind(TFS, distance)
-TFS$distance <- as.numeric(as.character(TFS$distance))
-TFS$corr <- as.numeric(as.character(TFS$corr))
-
-# TFS <- TFS[-which(TFS$distance==Inf), ] 
-TFS <- TFS[which(TFS$corr>=0), ] 
-
-plot( TFS$distance , TFS$corr )
-cor.test( TFS$distance , TFS$corr  ) 
 
 
 ```
