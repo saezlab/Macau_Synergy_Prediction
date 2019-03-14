@@ -1,0 +1,109 @@
+---
+title: "check synergy"
+author: "MI YANG"
+date: "`r doc_date()`"
+package: "`r pkg_ver('BiocStyle')`"
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+---
+
+```{r include=FALSE, cache=FALSE}
+
+path <- "~/Documents/RWTH_Aachen"
+load(paste0(path,"/SANGER_DATA/MASTER_LIST_22112013.ro")) 
+source(paste0(path,"/MACAU_PROJECT/check_synergy_functions.R"))
+source(paste0(path,"/MACAU_PROJECT/interaction_matrix_Functions.R"))
+source(paste0(path,"/FUNCTIONS/PLOT.R"))
+source(paste0(path,"/FUNCTIONS/general_functions.R"))
+target <- read.csv(paste0(path,"/macau_work_dir/macau_test_sanger/DATA/target"), check.names = F) ; drug_names <- target[,1] ; target <- target[ ,-1]
+DRUG_ANALYSIS_SET_update$Drug.Name <- DRUG_ANALYSIS_SET$DRUG_NAME
+
+target_to_remove <- c()
+for (i in 1:length(colnames(target))) {
+  protein_target <- print_target_GDSC (protein_target= colnames(target)[i], target_matrix=target, drug_names=drug_names )
+  if ( length(protein_target[,1]) == 1 ) { target_to_remove <- c(target_to_remove, i) }
+}
+target_to_remove <- c(target_to_remove , which(colnames(target) %in% c("others","not defined" ))  ) 
+
+tissue_label_gdsc <- read.csv(paste0(path,"/SANGER_DATA/tissue_label_gdsc_ID"), row.names=1)
+table(tissue_label_gdsc$tissue) ; names(which(table(tissue_label_gdsc$tissue) > 20)) 
+# print_target_GDSC (protein_target= "GSK3B", target_matrix=target, drug_names=drug_names , T)
+
+target <- read.csv(paste0(path,"/macau_work_dir/macau_test_sanger/DATA/target"), check.names = F) 
+target <- target[!duplicated(target[,1]),] ; rownames(target) <- target[,1] ; target <- target[ ,-1]
+
+# from SANGER
+combi_reduce <- read.csv(paste0(path,"/SANGER_DATA/DATA_COMBO/combi_reduce"), row.names = 1)
+
+```
+
+
+
+## BRAF
+```{r include=FALSE, cache=FALSE}
+
+########################## COLON: choose tissue and target combo #########################
+tissue_name <- "colon" ; drug=1
+progeny11 <- read.csv(paste0(path,"/SANGER_DATA/TISSUE/",tissue_name,"/progeny11") , row.names=1) ; progeny11 <- ID_to_celllines(progeny11)
+SNP_CNV <- read.csv(paste0(path,"/SANGER_DATA/TISSUE/",tissue_name,"/SNP_CNV"), row.names=1,check.names = F) ; SNP_CNV <- ID_to_celllines(SNP_CNV)
+Additional_Parameter <- SNP_CNV
+
+t <- c("BRAF","IR");    high<-c("Hypoxia","p53","MAPK"); low<-c("Trail","VEGF","PI3K"); genomics<-c(); conc <- "max"
+t <- c("BRAF","IR");    high<-c("Hypoxia","p53","MAPK"); low<-c("Trail","VEGF","PI3K"); genomics<-c("gain:cnaPANCAN124 (EGFR)"); conc <- "max"
+t <- c("BRAF","IR");    high<-c("Hypoxia","p53","MAPK"); low<-c("Trail","VEGF","PI3K"); genomics<-c("BRAF_mut"); conc <- "max"
+
+#################################### test targets ########################################
+df<-check_SYNERGY_SANGER(combi_reduce,"XMID")[[1]] ; scatter_plot_SANGER(title=paste0(t[1],"/",t[2]," for ",length(rownames(df))," ",tissue_name," cell lines") , df,"XMID")
+
+#### check mutation BRAF_mut
+# colnames(SNP_CNV)[ grep("BRAF", colnames(SNP_CNV)) ] ; 
+BRAF_mut <- rownames(SNP_CNV)[which(SNP_CNV$BRAF_mut==1)]
+KRAS_mut <- rownames(SNP_CNV)[which(SNP_CNV$KRAS_mut==1)] #  paste0(KRAS_mut,sep="," )
+EGFR_cnv <- rownames(SNP_CNV)[which(SNP_CNV$`gain:cnaPANCAN124 (EGFR)`==1)]
+cell_chosen <- unique(c(KRAS_mut))
+
+df<-check_SYNERGY_SANGER(combi_reduce,"XMID")[[1]]; df_selected <- df[rownames(df) %in% cell_chosen, ] ; scatter_plot_SANGER(title=paste0(t[1],"/",t[2]," combination for ",length(rownames(df_selected))," ",tissue_name," cell lines") ,df_selected,"XMID")
+
+
+##################### PLOT result selected top hits for validation ########################
+
+result_folder <- paste0(path,"/MACAU_PROJECT/PLOTS/DRUG_COMBO_PREDICTION/SANGER/")
+if(!dir.exists(result_folder)) dir.create(result_folder);
+
+library(cowplot)
+pdf(file=paste0(result_folder,tissue_name,"_",paste("BRAF_IR", sep="_"),"_mut.pdf"), width = 30, height = 30,  compress=TRUE, onefile = F)
+par(mfrow=c(2,2))
+
+t <- c("BRAF","IR"); high<-c("Hypoxia","p53","MAPK"); low<-c("Trail","VEGF","PI3K"); genomics<-c(); conc <- "max"
+title <- expression(atop("BRAF/IR, 48 colorectal cell lines", paste("Delta PA")))
+df<-check_SYNERGY_SANGER(combi_reduce,"XMID")[[1]] ; fig1 <- scatter_plot_SANGER(title=title, df,"XMID",text_size=50,title_size=3.2)
+
+t <- c("BRAF","IR");    high<-c("Hypoxia","p53","MAPK"); low<-c("Trail","VEGF","PI3K"); genomics<-c("BRAF_mut"); conc <- "max"
+title <- expression(atop("BRAF/IR, 48 colorectal cell lines", paste("Delta PA + BRAF" [mut])))
+df<-check_SYNERGY_SANGER(combi_reduce,"XMID")[[1]] ; fig2 <- scatter_plot_SANGER(title=title, df,"XMID",text_size=50,title_size=3.2)
+
+t <- c("BRAF","IR"); high<-c("Hypoxia","p53","MAPK"); low<-c("Trail","VEGF","PI3K"); genomics<-c("KRAS_mut"); conc <- "max"
+title <- expression(atop("BRAF/IR, 48 colorectal cell lines", paste("Delta PA + KRAS" [mut])))
+df<-check_SYNERGY_SANGER(combi_reduce,"XMID")[[1]] ; fig3 <- scatter_plot_SANGER(title=title, df,"XMID",text_size=50,title_size=3.2,coeff_x=0.7 )
+
+t <- c("BRAF","IR");    high<-c("Hypoxia","p53","MAPK"); low<-c("Trail","VEGF","PI3K"); genomics<-c("BRAF_mut"); conc <- "max"
+title <- expression(atop(paste("BRAF/IR, 26 colorectal KRAS" [mut]," cell lines"), paste("Delta PA + BRAF" [mut])))
+df<-check_SYNERGY_SANGER(combi_reduce,"XMID")[[1]];df_selected <- df[rownames(df) %in% KRAS_mut, ]; fig4 = scatter_plot_SANGER(title=title,df_selected,"XMID",text_size=50,title_size=3.2)
+
+plot_grid(fig1,fig2,fig3,fig4, nrow = 2, ncol = 2 , scale = 0.9 )  # 
+dev.off()
+drug <- 1 
+
+title <- expression(atop(paste0(t[1],"/",t[2],", ",length(rownames(df))," cell lines"), paste("Delta PA")))
+
+
+
+```
+
+
+
+
