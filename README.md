@@ -16,7 +16,9 @@ https://github.com/saezlab/Macau_project_1
 **GDSC_DRUG_COMBO_TOP_HITS.Rmd**: Use this script and result from previous publication to find pathways predictive of synergy. 
 
 Use the top hit pathways to compute the Delta Pathway Activity and stratify new cell lines. 
+
 **check_synergy_AZ.Rmd** for AstraZeneca. Contains both synergy prediction and stratification for breast/colon/lung cancer cell lines.
+
 **check_synergy_SANGER.Rmd** for Sanger validation of synergy stratification on 48 colorectal cancer cell lines
  
 ## Synergy enrichment in NCI_ALMANAC dataset
