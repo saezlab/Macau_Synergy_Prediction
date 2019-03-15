@@ -15,6 +15,8 @@ output:
 
 # First generate processed data with Macau regarding TISSUE_SPECIFIC_GDSC 
 # https://github.com/saezlab/Macau_project_1
+#  $path/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_GDSC/target_progeny11/MEAN/
+#  $path/MACAU_PROJECT/DATA_RESULT_STORAGE/TISSUE_SPECIFIC_GDSC/target_progeny11_PERMUTATION`
 
 
 path <- "~/Documents/RWTH_Aachen"  
