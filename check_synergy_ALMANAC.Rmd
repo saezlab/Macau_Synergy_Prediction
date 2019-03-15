@@ -1,0 +1,245 @@
+---
+title: "check synergy"
+author: "MI YANG"
+date: "`r doc_date()`"
+package: "`r pkg_ver('BiocStyle')`"
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+---
+
+
+```{r include=FALSE, cache=FALSE}
+library(ggrepel)
+path <- "~/Documents/RWTH_Aachen"
+path2 <- paste0(path,"/DREAM_AZ/DATA_ALMANAC/")
+load(paste0(path,"/SANGER_DATA/MASTER_LIST_22112013.ro"))
+source(paste0(path,"/FUNCTIONS/PLOT.R", sep=""))
+source(paste0(path,"/MACAU_PROJECT/check_synergy_functions.R"))
+source(paste0(path,"/MACAU_PROJECT/interaction_matrix_Functions.R"))
+source(paste0(path,"/FUNCTIONS/general_functions.R"))
+
+target <- read.csv(paste0(path,"/macau_work_dir/macau_test_sanger/DATA/target"), check.names = F) ; drug_names <- target[,1] ; target <- target[ ,-1]
+target_to_remove <- c()
+for (i in 1:length(colnames(target))) {
+protein_target <- print_target_GDSC (protein_target= colnames(target)[i], target_matrix=target, drug_names=drug_names )
+if ( length(protein_target[,1]) == 1 ) { target_to_remove <- c(target_to_remove, i) } }
+target_to_remove <- c(target_to_remove , which(colnames(target) %in% c("others","not defined" ))  ) 
+
+tissue <- c("aero_dig_tract","bone","brain","breast","colon","kidney","leukemia","liver","lung_NSCLC","lung_SCLC","lymphoma","ovary","pancreas","skin","soft_tissue","stomach")
+tissue_ALMANAC <- c("Breast Cancer","CNS Cancer","Colon Cancer","Leukemia","Melanoma","Non-Small Cell Lung Cancer","Ovarian Cancer","Renal Cancer")
+
+compound_name_simplified <- read.csv(paste0(path2,"compound_name_simplified"), row.names=1)
+ComboCompoundNames_all <- read.delim( paste0(path,"/DREAM_AZ/DATA_ALMANAC/ComboCompoundNames_all.txt"), header=FALSE)
+ComboCompoundNames_all[,2] = toupper(ComboCompoundNames_all[,2])
+
+ALMANAC <- read.csv(paste0(path2,"ComboDrugGrowth_Nov2017.csv"))  # ComboDrugGrowth_Nov2017 downloaded from https://wiki.nci.nih.gov/display/NCIDTPdata/NCI-ALMANAC
+ALMANAC <- ALMANAC[ , c("NSC1","CONCINDEX1","CONC1","NSC2","CONCINDEX2","CONC2","SCORE","PANEL","CELLNAME") ]
+
+scatter_plot_normal <- function(df,title,x_lab,y_lab,switch_anchor=F,method=lm,text_size=35,title_size=3.5 ,coeff_x=0.5,coeff_y=0) {
+  # equation, correlation and p value
+  df <- as.data.frame(df) ; colnames(df) <- c("a","b")
+  out <- cor.test(df$a,df$b) ; r <- out$estimate ; p <- out$p.value
+  lm_eqn <- function(df){
+    m <- lm(b ~ a, df);
+    eq <- substitute(~~italic("r")~"="~r*","~~italic("p")~"="~p,
+                     list(a = format(coef(m)[1], digits = 2), 
+                          b = format(coef(m)[2], digits = 2), 
+                          r = format(unname(r), digits = 2),
+                          p = format(p, digits=2)))
+    as.character(as.expression(eq));                 
+  }
+  g <- ggplot(df, aes(a, b, color = b)) + 
+    geom_point(shape = 16, size = 8, show.legend = FALSE, alpha = .8 ) +  geom_smooth(method=method,se=F,show.legend=F) + 
+    labs(x =x_lab, y=y_lab) + ggtitle(title) + 
+    theme(legend.position="bottom",axis.text=element_text(size= text_size) , axis.title= element_text(size=text_size), plot.title = element_text(size=rel(title_size), hjust=0.5),
+          panel.background = element_rect(fill='white'),panel.grid.major = element_line(colour = "grey90") ) + 
+    geom_text(x = min(df$a) + coeff_x*(max(df$a)-min(df$a)), y = min(df$b) + coeff_y*(max(df$b)-min(df$b)), label = lm_eqn(df), parse = TRUE,show.legend=F,color="black",size = 15)  + 
+    scale_color_gradient(low = "#8B3A3A" , high = "#8B3A3A" ) #  
+  return(g)
+}
+
+
+
+```
+
+
+# common target
+
+```{r include=FALSE, cache=FALSE}
+
+result_folder <- paste0(path,"/MACAU_PROJECT/PLOTS/DRUG_COMBO_PREDICTION/ALMANAC/")
+dir.create(result_folder),recursive = TRUE)
+
+target_ALMANAC <- read.csv(paste0(path2,"target"), row.names=1)
+target_ALMANAC <- target_ALMANAC[which(rowSums(target_ALMANAC) <= 2), ] 
+target_ALMANAC <- target_ALMANAC[ ,which(colSums(target_ALMANAC) > 0)]
+
+target_GDSC <- target
+target_GDSC <- target_GDSC[ , -target_to_remove ]
+common <- intersect(colnames(target_ALMANAC), colnames(target_GDSC))
+all_combo_target <- t(combn(common, m=2))
+
+search_similarity_across_tissues <- function(df) {
+  pair_table <- df
+  corr_table <- c()
+  for(pair in 1:length(pair_table[ ,1])) { #   pair = 5
+    corr_store <- c()
+    for(tissue_number in 1:length(tissue)) {  # tissue_number=1
+      x <- retrieve_interaction_plot(drug_feature_name="target",cell_feature_name="progeny11",selection="conservative",cut_off="single",tissue_name = tissue)[[1]] ; x <- x[[tissue_number]]
+      pcorr <- cor.test(as.numeric(x[pair_table[pair,1], ]),as.numeric(x[pair_table[pair,2], ]))
+      corr_store <- c(corr_store, pcorr$estimate)
+    }
+    corr_table <- rbind(corr_table, corr_store)
+  }
+  colnames(corr_table) <- tissue
+  
+  pair_table[ ,1] <- as.character(pair_table[ ,1])
+  pair_table[ ,2] <- as.character(pair_table[ ,2])
+  rownames(corr_table) <- paste0(pair_table[ ,1],"/",pair_table[ ,2])
+  return(corr_table)
+}
+
+corr_table <- search_similarity_across_tissues(all_combo_target)
+
+# storedata(corr_table, paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE"))
+corr_table <- read.csv(paste0(path,"/MACAU_PROJECT/DATA_RESULT_STORAGE/corr_table"), check.names = F, row.names = 1)
+corr_table <- corr_table[ -which(rownames(corr_table)=="EGFR/ERBB2") , ] # remove this, because 1 drug targets ERBB2/EGFR, 1 drug target ERBB2, so there is no synergy
+
+target_pair <- strsplit(rownames(corr_table), "/")
+
+target_candidate <- c()
+for(i in 1:length(target_pair)) {  #  i=26
+  target_ALMANAC_subset <- target_ALMANAC[ ,target_pair[[i]]]
+  target_ALMANAC_subset <- target_ALMANAC_subset[which(rowSums(target_ALMANAC_subset) > 0), ]
+  target_ALMANAC_subset <- target_ALMANAC[rownames(target_ALMANAC_subset), ]
+  target_ALMANAC_subset <- target_ALMANAC_subset[ ,which(colSums(target_ALMANAC_subset) > 0)]
+  target_candidate <- c(target_candidate, length(rownames(target_ALMANAC_subset)))
+}
+
+target_candidate <- which(target_candidate >= 2)
+corr_table_candidate <- corr_table[ target_candidate , ]
+
+average_synergy <- c()
+for(i in 1:length(target_candidate)) {  #  i=25
+  
+  target_1 <- target_pair[[target_candidate[[i]]]][1]
+  target_2 <- target_pair[[target_candidate[[i]]]][2]
+  
+  target_ALMANAC_subset <- target_ALMANAC[ ,c(target_1,target_2)]
+  target_ALMANAC_subset <- target_ALMANAC_subset[which(rowSums(target_ALMANAC_subset) > 0), ]
+  target_ALMANAC_subset <- target_ALMANAC[rownames(target_ALMANAC_subset), ]
+  target_ALMANAC_subset <- target_ALMANAC_subset[ ,which(colSums(target_ALMANAC_subset) > 0)]
+  
+  if(length(rownames(target_ALMANAC_subset)) > 2) {
+    drug_group_1 <- rownames(target_ALMANAC_subset)[which(target_ALMANAC_subset[ ,target_1]==1)]
+    drug_group_2 <- rownames(target_ALMANAC_subset)[which(target_ALMANAC_subset[ ,target_2]==1)]
+    pair_table <- expand.grid(drug_group_1,drug_group_2)
+
+    ComboCompoundNames_all_subset <- ComboCompoundNames_all[ComboCompoundNames_all$V2 %in% rownames(target_ALMANAC_subset), ]
+
+    similar_combo_average_synergy <- c()
+    for(similar_combo in 1:length(pair_table$Var1)) {
+      combo <- ALMANAC[ ALMANAC$NSC1 == ComboCompoundNames_all_subset[ComboCompoundNames_all_subset$V2==pair_table[similar_combo,1],1], ]
+      combo <- combo[ combo$NSC2 == ComboCompoundNames_all_subset[ComboCompoundNames_all_subset$V2==pair_table[similar_combo,2],1], ]
+      combo <- combo[complete.cases(combo), ]
+
+      mean_store <- c()
+      for(t in 1:length(tissue_ALMANAC)) {  
+        # synergy_surrogate <- mean(combo[ combo$PANEL==tissue_ALMANAC[t] , "SCORE" ] ) 
+        # combo_tissue <- combo[ combo$PANEL==tissue_ALMANAC[t] , ] ; synergy_surrogate <- length( which(combo_tissue$SCORE > 0 ) )
+        # combo_tissue <- combo[ combo$PANEL==tissue_ALMANAC[t] , ] ; synergy_surrogate <- mean( combo_tissue[ which(combo_tissue$SCORE > 0 ), "SCORE" ] )
+        combo_tissue <- combo[ combo$PANEL==tissue_ALMANAC[t] , ] ; synergy_surrogate <- length( which(combo_tissue$SCORE > 0 ) )
+        mean_store <- c(mean_store , synergy_surrogate )   }
+      similar_combo_average_synergy <- cbind(similar_combo_average_synergy, mean_store )
+    }
+    average_synergy <- rbind( average_synergy, rowMeans(similar_combo_average_synergy, na.rm = T) )
+
+  } else {
+
+    ComboCompoundNames_all_subset <- ComboCompoundNames_all[ComboCompoundNames_all$V2 %in% rownames(target_ALMANAC_subset), ]
+    combo <- ALMANAC[ ALMANAC$NSC1 == ComboCompoundNames_all_subset$V1[1], ]
+    combo <- combo[ combo$NSC2 == ComboCompoundNames_all_subset$V1[2], ]
+    combo <- combo[complete.cases(combo), ]
+    table(combo$PANEL)
+
+    mean_store <- c()
+    for(t in 1:length(tissue_ALMANAC)) {  
+      combo_tissue <- combo[ combo$PANEL==tissue_ALMANAC[t] , ] ; synergy_surrogate <- length( which(combo_tissue$SCORE > 0 ) )
+      mean_store <- c(mean_store , synergy_surrogate )   }
+    average_synergy <- rbind ( average_synergy, mean_store )
+  }
+}
+
+rownames(average_synergy) <- rownames(corr_table_candidate)
+colnames(average_synergy) <- tissue_ALMANAC
+average_synergy <- average_synergy[apply(average_synergy, 1, function(y) !all(y==0)),]
+average_synergy <- average_synergy[complete.cases(average_synergy), ]
+
+corr_table_candidate_subset <- corr_table_candidate[ ,c("breast","brain","colon","leukemia","skin","lung_NSCLC","ovary","kidney")]
+corr_table_candidate_subset <- corr_table_candidate_subset[ rownames(average_synergy) , ]   
+corr_table_candidate_subset_abs <- abs(corr_table_candidate_subset)
+
+corrr_all_tissue <- c()
+for(i in 1:length(tissue_ALMANAC)) {  #   i=1
+  result <- cbind( corr_table_candidate_subset_abs[ ,i] , average_synergy[ ,i] )
+  colnames(result) <- c("similarity","synergy")
+  result <- as.data.frame(result)
+  result <- aggregate(similarity~synergy, result, mean)
+  
+  corr <- cor.test(result[ ,1], result[ ,2]) 
+  corrr_all_tissue <- c(corrr_all_tissue , corr$estimate ) 
+}
+names(corrr_all_tissue) <- tissue_ALMANAC ; corrr_all_tissue ; mean(corrr_all_tissue)
+
+
+result <- cbind( rowMeans(corr_table_candidate_subset_abs) , rowMeans(average_synergy) )
+colnames(result) <- c("similarity","synergy")
+result <- as.data.frame(result)
+result <- aggregate(similarity~synergy, result, max )
+result <- cbind(result$similarity,result$synergy) 
+colnames(result) <- c("similarity","synergy")
+cor.test(result[ ,1], result[ ,2])
+plot(result[ ,1], result[ ,2])
+
+similarity_label <- "Absolute Target functional similarity"
+synergy_label <- "Number of synergistic cases"
+
+##  plot(corr_table_candidate_subset[ ,2],average_synergy[ ,2])
+
+pdf(file=paste0(result_folder,"/","COMBO_ALL_TISSUES.pdf"), width = 10, height = 10,  compress=TRUE, onefile = T)
+  result <- cbind( rowMeans(corr_table_candidate_subset_abs) , rowMeans(average_synergy) )
+  colnames(result) <- c("similarity","synergy")
+  result <- as.data.frame(result)
+  
+  for(t in 1:length(rownames(result))) { L_temp_1 <- rownames(result)[t] ; L_temp_1 <- sort(L_temp_1) ; rownames(result)[t] <- paste(L_temp_1,collapse = ":") }
+  result <- result[order(result[ ,2]), ]
+  
+  result_agg <- aggregate(similarity~synergy, result, max )
+  result_agg <- cbind(result_agg$similarity,result_agg$synergy) 
+  colnames(result_agg) <- c("similarity","synergy")
+  result <- result[result$similarity %in% result_agg[ , 1] , ]  ; rownames(result_agg) <- rownames(result)
+  scatter_plot_normal(df=result_agg,title=paste0("Average across tissues") ,x_lab=similarity_label,y_lab=synergy_label,coeff_x=0.7)
+  
+  for(i in 1:length(tissue_ALMANAC)) { # i=2
+    result <- cbind( corr_table_candidate_subset_abs[ ,i] , average_synergy[ ,i] )
+    colnames(result) <- c("similarity","synergy")
+    result <- as.data.frame(result)
+    
+    for(t in 1:length(rownames(result))) { L_temp_1 <- rownames(result)[t] ; L_temp_1 <- sort(L_temp_1) ; rownames(result)[t] <- paste(L_temp_1,collapse = ":") }
+    result <- result[order(result[ ,2]), ]
+    
+    result_agg <- aggregate(similarity~synergy, result, max)
+    result_agg <- cbind(result_agg$similarity,result_agg$synergy) 
+    colnames(result_agg) <- c("similarity","synergy")  
+    result <- result[result$similarity %in% result_agg[ , 1] , ]  ; rownames(result_agg) <- rownames(result)
+    print( scatter_plot_normal(df=result_agg,title=paste0(colnames(corr_table_candidate_subset)[i]) ,x_lab=similarity_label,y_lab=synergy_label,coeff_x=0.7) ) 
+  }
+dev.off()
+
+
+```
+
