@@ -11,7 +11,7 @@ https://github.com/saezlab/Macau_project_1
 ![Alt text](https://github.com/saezlab/Macau_Synergy_Prediction/blob/master/image/Figure_1.png)
 
 
-## Top synergistic target pairs in GDSC dataset
+## Result analysis
 
 **GDSC_DRUG_COMBO_TOP_HITS.Rmd**: Use this script and result from previous publication to find pathways predictive of synergy. 
 
@@ -21,8 +21,7 @@ Use the top predictive pathways to compute the Delta Pathway Activity and strati
 
 **check_synergy_SANGER.Rmd** for Sanger validation of synergy stratification on 48 colorectal cancer cell lines
  
-## Synergy enrichment in NCI_ALMANAC dataset
-**check_synergy_ALMANAC.Rmd**
+**check_synergy_ALMANAC.Rmd**: Synergy enrichment in NCI_ALMANAC dataset
 
 
 ## License
