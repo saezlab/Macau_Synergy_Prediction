@@ -18,7 +18,7 @@ https://github.com/saezlab/Macau_project_1
 
  * Identify key pathways for synergy stratification for breast tissue. 
 
- * Identify protein target to combine with BRAF for clorectal cancer validation.
+ * Identify protein target to combine with BRAF for colorectal cancer validation.
 
  * Save target functional similarity values for breast, colon and lung_NSCLC from GDSC dataset.
 
