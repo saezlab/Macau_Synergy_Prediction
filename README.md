@@ -1,4 +1,4 @@
-# Stratification and prediction of drug synergy based on target functional similarity
+## Stratification and prediction of drug synergy based on target functional similarity
 
 The interaction matrices are generated using codes from this publication: 
 **Yang et al. Linking drug target and pathway activation for effective therapy using multi-task learning.**
