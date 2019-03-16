@@ -1,6 +1,6 @@
 ## Stratification and prediction of drug synergy based on target functional similarity
 
-The first step is to generate the target-pathway interactions using cancer cell lines. Those interaction matrices are generated using codes from this publication: 
+The first step is to generate the target-pathway interactions using drug response data on cancer cell lines. Those interaction matrices are generated using codes from this publication: 
 **Yang et al. Linking drug target and pathway activation for effective therapy using multi-task learning.**
 
 https://www.nature.com/articles/s41598-018-25947-y
@@ -13,13 +13,13 @@ https://github.com/saezlab/Macau_project_1
 
 ## Result analysis
 
-**GDSC_DRUG_COMBO_TOP_HITS.Rmd**: Use this script and result from previous publication to find pathways predictive of synergy. 
+**GDSC_DRUG_COMBO_TOP_HITS.Rmd**: Use this script to identify key pathways for synergy stratification. 
 
 Use the top predictive pathways to compute the Delta Pathway Activity and stratify new cell lines. 
 
-**check_synergy_AZ.Rmd**: Contains both synergy prediction and stratification analysis for breast/colon/lung cancer cell lines in AstraZeneca dataset.
+**check_synergy_AZ.Rmd**: (i) Synergy tratification analysis for breast/colon/lung cancer cell lines on AstraZeneca dataset. (ii) Synergy prediction on AstraZeneca dataset. We show here that synergy arises in case of strong similarity or anti-similarity for breast and colorectal tissues.
 
-**check_synergy_SANGER.Rmd**: Synergy stratification on 48 colorectal cancer cell lines (Sanger validation)
+**check_synergy_SANGER.Rmd**: Synergy stratification on 48 colorectal cancer cell lines (Sanger validation).
  
 **check_synergy_ALMANAC.Rmd**: Synergy enrichment in NCI_ALMANAC dataset.
 
