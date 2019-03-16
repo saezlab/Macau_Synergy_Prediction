@@ -22,7 +22,7 @@ https://github.com/saezlab/Macau_project_1
  * Save target functional similarity values for breast, colon and lung_NSCLC from GDSC dataset.
 
 
-Use the top predictive pathways to compute the Delta Pathway Activity and stratify new cell lines. 
+*Use the top predictive pathways to compute the Delta Pathway Activity and stratify new cell lines.* 
 
 **check_synergy_AZ.Rmd**: 
 
@@ -32,11 +32,11 @@ Use the top predictive pathways to compute the Delta Pathway Activity and strati
 
 **check_synergy_SANGER.Rmd**: 
 
-Synergy stratification on 48 colorectal cancer cell lines (Sanger validation).
+ * Synergy stratification on 48 colorectal cancer cell lines (Sanger validation).
  
 **check_synergy_ALMANAC.Rmd**: 
 
-Synergy enrichment in NCI_ALMANAC dataset.
+ * Synergy enrichment in NCI_ALMANAC dataset.
 
 
 ## License
