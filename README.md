@@ -38,6 +38,14 @@ https://github.com/saezlab/Macau_project_1
 
  * Synergy enrichment in NCI_ALMANAC dataset.
 
+## Source of the data
+
+GDSC data were downloaded from: http://www.cancerrxgene.org/
+ * Drug IC50 version 17a
+ * Basal gene expression 12/06/2013 version 2
+ * Drug target version March 2017
+DREAM drug combination challenge data were acquired through an AstraZeneca Open Innovation Proposal.
+NCI-ALMANAC data is downloaded from the publication Holbeck et al. 
 
 ## License
 
