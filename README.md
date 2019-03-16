@@ -17,11 +17,11 @@ https://github.com/saezlab/Macau_project_1
 
 Use the top predictive pathways to compute the Delta Pathway Activity and stratify new cell lines. 
 
-**check_synergy_AZ.Rmd** for AstraZeneca. Contains both synergy prediction and stratification for breast/colon/lung cancer cell lines.
+**check_synergy_AZ.Rmd**: Contains both synergy prediction and stratification analysis for breast/colon/lung cancer cell lines in AstraZeneca dataset.
 
-**check_synergy_SANGER.Rmd** for Sanger validation of synergy stratification on 48 colorectal cancer cell lines
+**check_synergy_SANGER.Rmd**: Synergy stratification on 48 colorectal cancer cell lines (Sanger validation)
  
-**check_synergy_ALMANAC.Rmd**: Synergy enrichment in NCI_ALMANAC dataset
+**check_synergy_ALMANAC.Rmd**: Synergy enrichment in NCI_ALMANAC dataset.
 
 
 ## License
