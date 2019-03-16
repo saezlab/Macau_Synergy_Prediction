@@ -1,6 +1,7 @@
 ## Stratification and prediction of drug synergy based on target functional similarity
 
 The first step is to generate the target-pathway interactions using drug response data on cancer cell lines. Those interaction matrices are generated using codes from this publication: 
+
 **Yang et al. Linking drug target and pathway activation for effective therapy using multi-task learning.**
 
 https://www.nature.com/articles/s41598-018-25947-y
