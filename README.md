@@ -15,19 +15,19 @@ https://github.com/saezlab/Macau_project_1
 
 **GDSC_DRUG_COMBO_TOP_HITS.Rmd**: 
 
- * (i) Identify key pathways for synergy stratification for breast tissue. 
+ * Identify key pathways for synergy stratification for breast tissue. 
 
- * (ii) Identify protein target to combine with BRAF for clorectal cancer validation.
+ * Identify protein target to combine with BRAF for clorectal cancer validation.
 
- * (iii) Save target functional similarity values for breast, colon and lung_NSCLC from GDSC dataset.
+ * Save target functional similarity values for breast, colon and lung_NSCLC from GDSC dataset.
 
 Use the top predictive pathways to compute the Delta Pathway Activity and stratify new cell lines. 
 
 **check_synergy_AZ.Rmd**: 
 
-(i) Synergy tratification analysis for breast/colon/lung cancer cell lines on AstraZeneca dataset. 
+ * Synergy tratification analysis for breast/colon/lung cancer cell lines on AstraZeneca dataset. 
 
-(ii) Synergy prediction on AstraZeneca dataset. We show here that synergy arises in case of strong similarity or anti-similarity for breast and colorectal tissues.
+ * Synergy prediction on AstraZeneca dataset. We show here that synergy arises in case of strong similarity or anti-similarity for breast and colorectal tissues.
 
 **check_synergy_SANGER.Rmd**: Synergy stratification on 48 colorectal cancer cell lines (Sanger validation).
  
