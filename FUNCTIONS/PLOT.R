@@ -2,7 +2,7 @@
 library(ggplot2) # for plotting
 library(ggsignif)
 library(gridExtra) # for arranging plots
-library(beeswarm)
+# library(beeswarm)
 library(ggrepel)
 
 scatter_plot <- function(df,title,x_lab,y_lab,switch_anchor=F,text_size=33,title_size=2.5,coeff_x=0.5) {
