@@ -50,6 +50,11 @@ DREAM drug combination challenge data were acquired through an AstraZeneca Open 
 
 NCI-ALMANAC data is downloaded from the publication Holbeck et al. 
 
+## Snapshot of all R packages used for data analysis 
+
+In case you encounter any issue, all packages used in this project are saved in the folder **packrat/src** 
+
+
 ## License
 
 Distributed under the GNU GPLv3 License. See accompanying file LICENSE.txt or copy at http://www.gnu.org/licenses/gpl-3.0.html.
