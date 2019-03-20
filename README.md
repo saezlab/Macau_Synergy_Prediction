@@ -54,6 +54,8 @@ NCI-ALMANAC data is downloaded from the publication Holbeck et al.
 
 In case you encounter any issue, all packages used in this project are saved in the folder **packrat/src** 
 
+https://rstudio.github.io/packrat/commands.html
+
 
 ## License
 
